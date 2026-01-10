@@ -1,0 +1,7 @@
+Motivation: auf der Arbeit sind Speech to text Funktionen in Microsoft ANwednungen, aufgrund von Datenschutz, grundsätzlich blockiert. Ein Text-to-Speech Programm, bei dem keine Daten auf externen Servern verarbeitet werden wäre also eventuell erlaubt
+
+Sprachmodel: openai-Whisper ist soweit ich es verstanden habe keine OpenAI API sondern wird komplett runtergeladen und lokal auf dem jeweiligen Rechner verwendet, wodurch keine Daten das Gerät verlassen würden
+
+Umsetzung: Simple UI mit buttons zum Starten, Pausieren und Beenden der aufnahme, sowie einem Button zur speicherung des Transskripts. OpenAI-Whisper als Sprachmodell
+
+- Es wäre gut, wenn der Text in einer Word datei abgelegt wird. (Wahrscheinlich angenehmer für Nutzer als eine .txt Datei)
