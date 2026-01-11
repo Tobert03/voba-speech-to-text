@@ -109,7 +109,6 @@ def main():
   root.mainloop()
 
 if __name__ == "__main__":
-   #noch GPU modell testen!!!
    transcription_model = WhisperModel("medium", device="cpu", compute_type="float32")
    main()
 
