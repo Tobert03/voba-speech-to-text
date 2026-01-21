@@ -113,3 +113,5 @@ def main():
 if __name__ == "__main__":
    transcription_model = WhisperModel("medium", device="cpu", compute_type="float32", cpu_threads=8)
    main()
+
+#runtime bottleneck = looping through segments and getting the text out of it line 79
