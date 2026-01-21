@@ -10,9 +10,9 @@ recording_thread = None
 #standard einstellungen für das recording übernommen, Sekunden auf 1 gestellt, da die Aufnahme in einer loop läuft
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
-CHANNELS = 1 if sys.platform == 'darwin' else 2
-RATE = 44100
-RECORD_SECONDS = 1
+CHANNELS = 1
+RATE = 16000
+RECORD_SECONDS = 0.5
 
 #Vaiablen global erstellen, damit man aus verschiedenen Funktionen auf sie zugreifen kann:
 AUDIO_FILE = 'recording.wav'
@@ -64,23 +64,25 @@ def stop_recording():
   stop_event.set()
   recording_thread.join()
 
-def transcription():
+def transcription(copy_button):
 
-  global copy_button, transcribed_text
+  global transcribed_text
 
   if not FILE_PATH.exists():
     return
 
-  segments, info = transcription_model.transcribe(AUDIO_FILE, language="de")
-  for seg in segments:
-    print(seg.text)
-    transcribed_text += seg.text
+  #transcriping speech to text and saving it in segments
+  segments, info = transcription_model.transcribe(AUDIO_FILE, language="de", beam_size=1, word_timestamps=False, vad_filter=False)
+  print('transribtion done')
 
-  
+  #joinging text from segments and saving it to a variable
+  transcribed_text = "".join(seg.text for seg in segments)
+
   copy_button.config(bg="green")
 
+#triggering the transcription thead
 def trigger_transcription(copy_button):
-  threading.Thread(target=transcription, daemon=True).start()
+  threading.Thread(target=transcription(copy_button), daemon=True).start()
 
 #kopiert den text in die Zwischenablage
 def copy_transcription():
@@ -109,7 +111,5 @@ def main():
   root.mainloop()
 
 if __name__ == "__main__":
-   transcription_model = WhisperModel("medium", device="cpu", compute_type="float32")
+   transcription_model = WhisperModel("medium", device="cpu", compute_type="float32", cpu_threads=8)
    main()
-
-#audio resamplen!!!
