@@ -18,7 +18,7 @@ RECORD_SECONDS = 0.5
 AUDIO_FILE = 'recording.wav'
 FILE_PATH = Path(AUDIO_FILE)
 
-copy_button = None
+rec_info = ""
 transcribed_text = ""
 
 def recording():
@@ -63,6 +63,7 @@ def start_recording():
 def stop_recording():
   stop_event.set()
   recording_thread.join()
+  check_recording()
 
 def transcription(copy_button):
 
@@ -90,14 +91,36 @@ def copy_transcription():
 
     pyperclip.copy(str(transcribed_text))
 
+def check_recording():
+
+  if FILE_PATH.exists():
+    with wave.open("recording.wav", "rb") as wf:
+      frames = wf.getnframes()
+      rate = wf.getframerate()
+      duration = frames / float(rate)
+      rec_info.configure(text= f"Aufnahme vorhanden: {duration} sek.")
+      return 
+  else:
+    rec_info.configure(text= "Keine Aufnahme")
+    return 
+  
+def delete_recording():
+  FILE_PATH.unlink()
+  check_recording()
+
 def main():
 
   root = tk.Tk()
   root.title("Speech to Text")
-  root.geometry("300x200")
+  root.geometry("250x300")
 
-  global copy_button
+  global rec_info
 
+  rec_info = tk.Label(root, text= "")
+  rec_info.pack(pady=10)
+  check_recording()
+  del_recording = tk.Button(root, text="Aktuelle Aufnahme löschen", command=lambda: delete_recording())
+  del_recording.pack(pady=10)
   rec_button = tk.Button(root, text = "Aufnahme Starten", command=lambda: start_recording())
   rec_button.pack(pady=10)
   rec_button = tk.Button(root, text = "Aufnahme pausieren", command=lambda: stop_recording())
@@ -114,4 +137,4 @@ if __name__ == "__main__":
    transcription_model = WhisperModel("medium", device="cpu", compute_type="float32", cpu_threads=8)
    main()
 
-#runtime bottleneck = looping through segments and getting the text out of it line 79
+#runtime bottleneck = looping through segments and getting the text out of in function transcription
