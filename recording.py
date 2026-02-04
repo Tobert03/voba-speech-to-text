@@ -1,5 +1,5 @@
 import tkinter as tk
-import pyaudio, sys, tiktoken, wave, threading, pyperclip
+import pyaudio, sys, tiktoken, wave, threading, pyperclip, os
 from pathlib import Path
 from faster_whisper import WhisperModel
 
@@ -12,16 +12,27 @@ CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
-RECORD_SECONDS = 0.5
+RECORD_SECONDS = 1
 
 #Vaiablen global erstellen, damit man aus verschiedenen Funktionen auf sie zugreifen kann:
 AUDIO_FILE = 'recording.wav'
 FILE_PATH = Path(AUDIO_FILE)
 
+#pfad zum whisper model
+def loading_model() -> WhisperModel:
+  if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+  else:
+    base_path= os.path.dirname(__file__)
+
+  WHISPER_PATH = os.path.join(base_path, "whisper-model")
+
+  return WhisperModel(WHISPER_PATH, device="cpu", local_files_only=True)
+
 rec_info = ""
 transcribed_text = ""
 
-def recording():
+def recording() -> None:
 
   append_old_frames = False
 
@@ -52,7 +63,7 @@ def recording():
       p.terminate()
 
 #seperater Thread wird erstellt um die Aufnahme im hintergrund und entkoppelt von der record funktion durchzuführen
-def start_recording():
+def start_recording() -> None:
   global recording_thread
   stop_event.clear()
 
@@ -65,16 +76,18 @@ def stop_recording():
   recording_thread.join()
   check_recording()
 
-def transcription(copy_button):
+def transcription(copy_button: tk.Button) -> None:
 
   global transcribed_text
+
+  copy_button.config(bg="SystemButtonFace")
 
   if not FILE_PATH.exists():
     return
 
   #transcriping speech to text and saving it in segments
-  segments, info = transcription_model.transcribe(AUDIO_FILE, language="de", beam_size=1, word_timestamps=False, vad_filter=False)
-  print('transribtion done')
+  with model_lock:
+    segments, info = transcription_model.transcribe(AUDIO_FILE, language="de", beam_size=1, word_timestamps=False, vad_filter=False)
 
   #joinging text from segments and saving it to a variable
   transcribed_text = "".join(seg.text for seg in segments)
@@ -82,16 +95,16 @@ def transcription(copy_button):
   copy_button.config(bg="green")
 
 #triggering the transcription thead
-def trigger_transcription(copy_button):
+def trigger_transcription(copy_button: tk.Button) -> None:
   threading.Thread(target=transcription(copy_button), daemon=True).start()
 
 #kopiert den text in die Zwischenablage
-def copy_transcription():
+def copy_transcription() -> None:
     global transcribed_text
 
     pyperclip.copy(str(transcribed_text))
 
-def check_recording():
+def check_recording() -> None:
 
   if FILE_PATH.exists():
     with wave.open("recording.wav", "rb") as wf:
@@ -104,11 +117,12 @@ def check_recording():
     rec_info.configure(text= "Keine Aufnahme")
     return 
   
-def delete_recording():
+def delete_recording(copy_button: tk.Button) -> None:
   FILE_PATH.unlink()
+  copy_button.config(bg="SystemButtonFace")
   check_recording()
 
-def main():
+def main() -> None:
 
   root = tk.Tk()
   root.title("Speech to Text")
@@ -119,12 +133,12 @@ def main():
   rec_info = tk.Label(root, text= "")
   rec_info.pack(pady=10)
   check_recording()
-  del_recording = tk.Button(root, text="Aktuelle Aufnahme löschen", command=lambda: delete_recording())
+  del_recording = tk.Button(root, text="Aktuelle Aufnahme löschen", command=lambda: delete_recording(copy_button))
   del_recording.pack(pady=10)
   rec_button = tk.Button(root, text = "Aufnahme Starten", command=lambda: start_recording())
   rec_button.pack(pady=10)
-  rec_button = tk.Button(root, text = "Aufnahme pausieren", command=lambda: stop_recording())
-  rec_button.pack(pady=10)
+  stop_button = tk.Button(root, text = "Aufnahme pausieren", command=lambda: stop_recording())
+  stop_button.pack(pady=10)
   conv_button = tk.Button(text = "Audio umwandeln", command=lambda: trigger_transcription(copy_button))
   conv_button.pack(pady=10)
   copy_button = tk.Button(text = "Text kopieren", command=lambda: copy_transcription())
@@ -134,7 +148,8 @@ def main():
   root.mainloop()
 
 if __name__ == "__main__":
-   transcription_model = WhisperModel("medium", device="cpu", compute_type="float32", cpu_threads=8)
+   transcription_model = loading_model()
+   model_lock = threading.Lock()
    main()
 
 #runtime bottleneck = looping through segments and getting the text out of in function transcription
